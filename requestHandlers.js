@@ -1,8 +1,8 @@
-var exec = require('child_process').exec;
 var queryString = require('querystring');
 var fs =  require('fs');
+var formidable = require("formidable");
 
-function start(response,postData) {
+function start(response) {
     console.log("Request Handler 'start' was called ");
     var body = '<html>'+
         '<head>'+
@@ -10,24 +10,37 @@ function start(response,postData) {
         'charset=UTF-8" />'+
         '</head>'+
         '<body>'+
-        '<form action="/upload" method="post">'+
-        '<textarea name="text" rows="20" cols="60"></textarea>'+
-        '<input type="submit" value="Submit text" />'+
-        '</form>'+
+            '<form action="/upload" enctype="multipart/form-data" method="post">'+
+                '<input type="file" name="upload" multiple="multiple" >'+
+                '<input type="submit" value="Upload file" />'+
+            '</form>'+
         '</body>'+
         '</html>';
     response.writeHead(200,{"Content-Type":"text/html"});
     response.write(body);
     response.end();
 }
-function upload(response,postData) {
+function upload(response,requst) {
     console.log("Request Handler 'upload' was called ");
-    response.writeHead(200,{"Content-Type":"text/plain"});
-    console.log(queryString);
-    response.write("You are send: "+queryString.parse(postData).text);
-    response.end();
+
+    var form = new formidable.IncomingForm();
+    console.log("about to parse");
+
+    //写一个临时路径   fs.rename()不能跨磁盘移动文件 renameSync 不能创建新目录
+    form.uploadDir = 'tmp';
+
+    form.parse(requst,function (error,fields,files) {
+        console.log("parsing done");
+        console.info("111111111111111111111",files);
+        fs.renameSync(files.upload.path,"tmp/test.png");
+        response.writeHead(200,{"Content-Type":"text/html"});
+        response.write("received image:<br/>");
+        response.write("<img src='/show'/>");
+        response.end();
+    });
+
 }
-function show(response, postData) {
+function show(response) {
     console.log("Request Handler 'show' was called");
     fs.readFile("./tmp/test.png","binary",function(error,file){
         if(error){
